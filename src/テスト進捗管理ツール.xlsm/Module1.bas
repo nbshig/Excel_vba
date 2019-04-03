@@ -1252,6 +1252,9 @@ Private Sub 予実管理作成(p_intNissu As Integer)
     Cells.Clear                         '全セルのクリア
     Cells.ColumnWidth = 5               '全セルの幅
     Cells.RowHeight = 20                '全セルの高さ
+    '19/03/26 Add Start
+    ActiveSheet.Columns.ClearOutline    '列のグループ化を全て削除
+    '19/03/26 Add End
 
     '変数宣言
     Dim Dic担当者 As Object
@@ -1265,11 +1268,12 @@ Private Sub 予実管理作成(p_intNissu As Integer)
         .Value = "予実管理"
         .Font.Bold = True
     End With
-    With Cells(1, 2)
-        .Value = "(金曜日を週末基準とする)"
-        .Font.Bold = True
-    End With
-    
+    '19/03/26 DEL Start
+'    With Cells(1, 2)
+'        .Value = "(金曜日を週末基準とする)"
+'        .Font.Bold = True
+'    End With
+    '19/03/26 DEL End
 
     '###########################
     '## テスト実施 ##
@@ -1349,6 +1353,19 @@ Private Sub 実績日登録()
     Dim j As Integer
     
     For i = m_lngStartRow To m_lngEndRow
+    
+        '19/03/26 Add Start
+        'テスト実施-着手-実績値の登録
+        For j = m_intStartColumn To m_intEndCoumn Step 1        '日次明細列を昇順に繰り回し
+            If (j Mod 4) = 3 Then                               '実施完了-実績の列
+                If Cells(i, j).Value <> "" Then
+                    Cells(i, 8).Value = Cells(1, j).Value
+                    Exit For
+                End If
+            End If
+        Next j
+        '19/03/26 Add End
+    
         '累積実施完了-予定数/実績数の一致を確認
         If Cells(i, m_intStartColumnRuiseki).Value = Cells(i, m_intStartColumnRuiseki + 1).Value Then
             'テスト実施-完了-実績値の登録
@@ -1407,6 +1424,7 @@ Private Sub 予実管理明細表作成(p_int開始行 As Integer, p_dicメンバー As Object, 
     Dim k As Integer
     Dim m As Integer
     Dim n As Integer
+    Dim l_bolChgFrg As Boolean
 
     '変数初期化
     Set l_sht_日次管理 = Sheets("日次管理")
@@ -1455,17 +1473,135 @@ Private Sub 予実管理明細表作成(p_int開始行 As Integer, p_dicメンバー As Object, 
     '合計
     Cells(p_int開始行 + 3 + p_dicメンバー.Count, 1).Value = "合計"
   
-  
-    '１週間単位に「予定」「実績」列項目を用意する
-    l_intNissu = p_intNissu
+     '19/03/26 Mod Start
+'    '１週間単位に「予定」「実績」列項目を用意する
+'    l_intNissu = p_intNissu
+'    l_wrkDate = l_sht_日次管理.Cells(1, m_intStartColumn).Value
+'    l_intWeeks = (m_intEndCoumn - m_intStartColumn) / 4 / 7
+'
+'    For k = 0 To l_intWeeks - 1
+'        For m = 0 To 1
+'            Cells(p_int開始行 + 1, 2 + (2 * k) + m).Value = l_wrkDate + 4   '金曜日を週末基準とする
+'
+'            If ((2 + m) Mod 2) = 0 Then      '予定
+'                Cells(p_int開始行 + 2, 2 + (2 * k) + m).Value = "予定"
+'                '担当者
+'                If p_int開始行 = 2 Then     'テスト実施
+'                    For j = 0 To p_dicメンバー.Count - 1
+'                        Cells(p_int開始行 + 3 + j, 2 + (2 * k) + m) = _
+'                        "=SUMPRODUCT((日次管理!" + l_sht_日次管理.Cells(1, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(1, m_intEndCoumn).Address + "<=" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2 + (2 * k) + m).Address + ")*(日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, 6).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, 6).Address + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1).Address + ")*(日次管理!" + l_sht_日次管理.Cells(2, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(2, m_intEndCoumn).Address + "=" + """実施完了""" + ")*(日次管理!" + l_sht_日次管理.Cells(3, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(3, m_intEndCoumn).Address + "=" + """予定""" + "),日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, m_intEndCoumn).Address + ")" '←関数が入る！
+'                    Next j
+'                Else                        'テスト精査
+'                    For j = 0 To p_dicメンバー.Count - 1
+'                        Cells(p_int開始行 + 3 + j, 2 + (2 * k) + m) = _
+'                        "=SUMPRODUCT((日次管理!" + l_sht_日次管理.Cells(1, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(1, m_intEndCoumn).Address + "<=" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2 + (2 * k) + m).Address + ")*(日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, 11).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, 11).Address + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1).Address + ")*(日次管理!" + l_sht_日次管理.Cells(2, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(2, m_intEndCoumn).Address + "=" + """精査完了""" + ")*(日次管理!" + l_sht_日次管理.Cells(3, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(3, m_intEndCoumn).Address + "=" + """予定""" + "),日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, m_intEndCoumn).Address + ")" '←関数が入る！
+'                    Next j
+'
+'                End If
+'                '合計
+'                Cells(p_int開始行 + 3 + p_dicメンバー.Count, 2 + (2 * k) + m) = _
+'                "=SUM(" + l_sht_Yojitsu.Cells(p_int開始行 + 3, 2 + (2 * k) + m).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + p_dicメンバー.Count - 1, 2 + (2 * k) + m).Address + ")"
+'
+'            ElseIf ((2 + m) Mod 2) = 1 Then  '実績
+'                Cells(p_int開始行 + 2, 2 + (2 * k) + m).Value = "実績"
+'                '担当者
+'                If p_int開始行 = 2 Then     'テスト実施
+'                    For j = 0 To p_dicメンバー.Count - 1
+'                        Cells(p_int開始行 + 3 + j, 2 + (2 * k) + m) = _
+'                        "=SUMPRODUCT((日次管理!" + l_sht_日次管理.Cells(1, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(1, m_intEndCoumn).Address + "<=" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2 + (2 * k) + m).Address + ")*(日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, 6).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, 6).Address + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1).Address + ")*(日次管理!" + l_sht_日次管理.Cells(2, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(2, m_intEndCoumn).Address + "=" + """実施完了""" + ")*(日次管理!" + l_sht_日次管理.Cells(3, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(3, m_intEndCoumn).Address + "=" + """実績""" + "),日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, m_intEndCoumn).Address + ")" '←関数が入る！
+'                    Next j
+'                Else                        'テスト精査
+'                    For j = 0 To p_dicメンバー.Count - 1
+'                        Cells(p_int開始行 + 3 + j, 2 + (2 * k) + m) = _
+'                        "=SUMPRODUCT((日次管理!" + l_sht_日次管理.Cells(1, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(1, m_intEndCoumn).Address + "<=" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2 + (2 * k) + m).Address + ")*(日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, 11).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, 11).Address + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1).Address + ")*(日次管理!" + l_sht_日次管理.Cells(2, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(2, m_intEndCoumn).Address + "=" + """精査完了""" + ")*(日次管理!" + l_sht_日次管理.Cells(3, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(3, m_intEndCoumn).Address + "=" + """実績""" + "),日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, m_intEndCoumn).Address + ")" '←関数が入る！
+'                    Next j
+'                End If
+'                '合計
+'                Cells(p_int開始行 + 3 + p_dicメンバー.Count, 2 + (2 * k) + m) = _
+'                "=SUM(" + l_sht_Yojitsu.Cells(p_int開始行 + 3, 2 + (2 * k) + m).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + p_dicメンバー.Count - 1, 2 + (2 * k) + m).Address + ")"
+'            End If
+'        Next m
+'        l_wrkDate = l_wrkDate + 7
+'    Next k
+    
+'    '「実績日による管理」列項目を用意する
+'    With Range(Cells(p_int開始行 + 1, 1 + l_intWeeks * 2 + 1), Cells(p_int開始行 + 1, 1 + l_intWeeks * 2 + 2))
+'        .Merge
+'        .Value = "実績日による管理" + vbCrLf + "(指摘有無に関わらず" + vbCrLf + "初回の実績入力日で管理)"
+'        .WrapText = True
+'        .ColumnWidth = 15
+'        .RowHeight = 40
+'    End With
+'
+'    Cells(p_int開始行 + 2, 1 + l_intWeeks * 2 + 1) = "進捗率"
+'    '担当者 + 合計
+'    For j = 0 To p_dicメンバー.Count
+'        With Cells(p_int開始行 + 3 + j, 1 + l_intWeeks * 2 + 1)
+'            .Value = "=SUMPRODUCT((" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + "- WEEKDAY(" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + ") + 6 =" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1 + l_intWeeks * 2).Address + ")*(" + """実績""" + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 1 + l_intWeeks * 2).Address + ")," + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intWeeks * 2).Address + ")" + _
+'            "/SUMPRODUCT((" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + "- WEEKDAY(" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + ") + 6 =" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1 + l_intWeeks * 2).Address + ")*(" + """予定""" + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 1 + l_intWeeks * 2).Address + ")," + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intWeeks * 2).Address + ")"
+'            .NumberFormatLocal = "0%"
+'        End With
+'    Next j
+'
+'    Cells(p_int開始行 + 2, 1 + l_intWeeks * 2 + 2) = "完了率"
+'    '担当者 + 合計
+'    For j = 0 To p_dicメンバー.Count
+'        With Cells(p_int開始行 + 3 + j, 1 + l_intWeeks * 2 + 2)
+'            .Value = "=" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intWeeks * 2).Address + "/" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intWeeks * 2 - 1).Address
+'            .NumberFormatLocal = "0%"
+'        End With
+'    Next j
+'
+'    '背景色
+'    Range(Cells(p_int開始行 + 1, 1), Cells(p_int開始行 + 1, 1 + l_intWeeks * 2 + 2)).Interior.ColorIndex = 40
+'    Range(Cells(p_int開始行 + 2, 1), Cells(p_int開始行 + 2, 1 + l_intWeeks * 2 + 2)).Interior.ColorIndex = 38
+'    '担当者 + 合計
+'    For j = 0 To p_dicメンバー.Count
+'        If (j Mod 2) = 1 Then
+'            Range(Cells(p_int開始行 + 3 + j, 1), Cells(p_int開始行 + 3 + j, 1 + l_intWeeks * 2 + 2)).Interior.ColorIndex = 24
+'        End If
+'    Next j
+'
+'    '罫線描写
+'    Range(Cells(p_int開始行 + 1, 1), Cells(p_int開始行 + 3 + p_dicメンバー.Count, 1 + l_intWeeks * 2 + 2)).Borders.LineStyle = xlContinuous
+'
+'    '太線描写
+'    '外枠
+'    With Range(Cells(p_int開始行 + 1, 1), Cells(p_int開始行 + 3 + p_dicメンバー.Count, 1 + l_intWeeks * 2 + 2))
+'        .Borders(xlEdgeRight).Weight = xlMedium
+'        .Borders(xlEdgeLeft).Weight = xlMedium
+'        .Borders(xlEdgeTop).Weight = xlMedium
+'        .Borders(xlEdgeBottom).Weight = xlMedium
+'    End With
+'    '内訳
+'    Range(Cells(p_int開始行 + 2, 1), Cells(p_int開始行 + 2, 1 + l_intWeeks * 2 + 2)).Borders(xlEdgeBottom).Weight = xlMedium
+'
+'    For k = 0 To l_intWeeks * 2
+'        If (k Mod 2) = 0 Then
+'            With Range(Cells(p_int開始行 + 1, 2 + k), Cells(p_int開始行 + 3 + p_dicメンバー.Count, 2 + k))
+'                .Borders(xlEdgeLeft).Weight = xlMedium
+'            End With
+'        End If
+'    Next k
+'
+'
+'    Rows(3).Columns.AutoFit                                         'セルの列幅自動設定
+'
+'    For n = 1 To l_intWeeks * 2 + 1
+'        Cells(3, n).ColumnWidth = Cells(3, n).ColumnWidth * 1.2     'セルの列幅自動設定 ×１．２倍
+'    Next n
+
+
+    '１日単位に「予定」「実績」列項目を用意する
+    l_intNissu = p_intNissu + 1
     l_wrkDate = l_sht_日次管理.Cells(1, m_intStartColumn).Value
     l_intWeeks = (m_intEndCoumn - m_intStartColumn) / 4 / 7
 
-    For k = 0 To l_intWeeks - 1
+    For k = 0 To l_intNissu - 1
         For m = 0 To 1
-            Cells(p_int開始行 + 1, 2 + (2 * k) + m).Value = l_wrkDate + 4   '金曜日を週末基準とする
+            Cells(p_int開始行 + 1, 2 + (2 * k) + m).Value = l_wrkDate   '基準日
 
-            If ((2 + m) Mod 2) = 0 Then      '予定
+            If ((2 + m) Mod 2) = 0 Then     '予定
                 Cells(p_int開始行 + 2, 2 + (2 * k) + m).Value = "予定"
                 '担当者
                 If p_int開始行 = 2 Then     'テスト実施
@@ -1503,63 +1639,80 @@ Private Sub 予実管理明細表作成(p_int開始行 As Integer, p_dicメンバー As Object, 
                 "=SUM(" + l_sht_Yojitsu.Cells(p_int開始行 + 3, 2 + (2 * k) + m).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + p_dicメンバー.Count - 1, 2 + (2 * k) + m).Address + ")"
             End If
         Next m
-        l_wrkDate = l_wrkDate + 7
+        l_wrkDate = l_wrkDate + 1
     Next k
-    
-    
+
     '「実績日による管理」列項目を用意する
-    With Range(Cells(p_int開始行 + 1, 1 + l_intWeeks * 2 + 1), Cells(p_int開始行 + 1, 1 + l_intWeeks * 2 + 2))
+    With Range(Cells(p_int開始行 + 1, 1 + l_intNissu * 2 + 1), Cells(p_int開始行 + 1, 1 + l_intNissu * 2 + 2))
         .Merge
         .Value = "実績日による管理" + vbCrLf + "(指摘有無に関わらず" + vbCrLf + "初回の実績入力日で管理)"
-        .WrapText = True    '
+        .WrapText = True
         .ColumnWidth = 15
         .RowHeight = 40
     End With
     
-    Cells(p_int開始行 + 2, 1 + l_intWeeks * 2 + 1) = "進捗率"
+    Cells(p_int開始行 + 2, 1 + l_intNissu * 2 + 1) = "進捗率"
     '担当者 + 合計
     For j = 0 To p_dicメンバー.Count
-        With Cells(p_int開始行 + 3 + j, 1 + l_intWeeks * 2 + 1)
-            .Value = "=SUMPRODUCT((" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + "- WEEKDAY(" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + ") + 6 =" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1 + l_intWeeks * 2).Address + ")*(" + """実績""" + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 1 + l_intWeeks * 2).Address + ")," + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intWeeks * 2).Address + ")" + _
-            "/SUMPRODUCT((" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + "- WEEKDAY(" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + ") + 6 =" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1 + l_intWeeks * 2).Address + ")*(" + """予定""" + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 1 + l_intWeeks * 2).Address + ")," + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intWeeks * 2).Address + ")"
+        With Cells(p_int開始行 + 3 + j, 1 + l_intNissu * 2 + 1)
+            .Value = "=SUMPRODUCT((" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + "- WEEKDAY(" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + ") + 6 =" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1 + l_intNissu * 2).Address + ")*(" + """実績""" + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 1 + l_intNissu * 2).Address + ")," + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intNissu * 2).Address + ")" + _
+            "/SUMPRODUCT((" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + "- WEEKDAY(" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + ") + 6 =" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1 + l_intNissu * 2).Address + ")*(" + """予定""" + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 1 + l_intNissu * 2).Address + ")," + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intNissu * 2).Address + ")"
             .NumberFormatLocal = "0%"
         End With
     Next j
 
-    Cells(p_int開始行 + 2, 1 + l_intWeeks * 2 + 2) = "完了率"
+    Cells(p_int開始行 + 2, 1 + l_intNissu * 2 + 2) = "完了率"
     '担当者 + 合計
     For j = 0 To p_dicメンバー.Count
-        With Cells(p_int開始行 + 3 + j, 1 + l_intWeeks * 2 + 2)
-            .Value = "=" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intWeeks * 2).Address + "/" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intWeeks * 2 - 1).Address
+        With Cells(p_int開始行 + 3 + j, 1 + l_intNissu * 2 + 2)
+            .Value = "=" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intNissu * 2).Address + "/" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intNissu * 2 - 1).Address
             .NumberFormatLocal = "0%"
         End With
     Next j
     
     '背景色
-    Range(Cells(p_int開始行 + 1, 1), Cells(p_int開始行 + 1, 1 + l_intWeeks * 2 + 2)).Interior.ColorIndex = 40
-    Range(Cells(p_int開始行 + 2, 1), Cells(p_int開始行 + 2, 1 + l_intWeeks * 2 + 2)).Interior.ColorIndex = 38
+    'Range(Cells(p_int開始行 + 1, 1), Cells(p_int開始行 + 2, 1 + l_intNissu * 2 + 2)).Interior.ColorIndex = 40
+    'Range(Cells(p_int開始行 + 2, 1), Cells(p_int開始行 + 2, 1 + l_intNissu * 2 + 2)).Interior.ColorIndex = 38
+    
+    For k = 1 To l_intNissu * 2 + 1 Step 2
+        With Range(Cells(p_int開始行 + 1, 1 + k), Cells(p_int開始行 + 2, 2 + k))
+        
+        If l_bolChgFrg Then
+            .Interior.ColorIndex = 35
+            l_bolChgFrg = False
+        Else
+            .Interior.ColorIndex = 40
+            l_bolChgFrg = True
+        End If
+        
+        End With
+    Next k
+    
+    Range(Cells(p_int開始行 + 1, 1), Cells(p_int開始行 + 2, 1)).Interior.ColorIndex = 38
+    
+        
     '担当者 + 合計
     For j = 0 To p_dicメンバー.Count
         If (j Mod 2) = 1 Then
-            Range(Cells(p_int開始行 + 3 + j, 1), Cells(p_int開始行 + 3 + j, 1 + l_intWeeks * 2 + 2)).Interior.ColorIndex = 24
+            Range(Cells(p_int開始行 + 3 + j, 1), Cells(p_int開始行 + 3 + j, 1 + l_intNissu * 2 + 2)).Interior.ColorIndex = 24
         End If
     Next j
 
     '罫線描写
-    Range(Cells(p_int開始行 + 1, 1), Cells(p_int開始行 + 3 + p_dicメンバー.Count, 1 + l_intWeeks * 2 + 2)).Borders.LineStyle = xlContinuous
+    Range(Cells(p_int開始行 + 1, 1), Cells(p_int開始行 + 3 + p_dicメンバー.Count, 1 + l_intNissu * 2 + 2)).Borders.LineStyle = xlContinuous
     
     '太線描写
     '外枠
-    With Range(Cells(p_int開始行 + 1, 1), Cells(p_int開始行 + 3 + p_dicメンバー.Count, 1 + l_intWeeks * 2 + 2))
+    With Range(Cells(p_int開始行 + 1, 1), Cells(p_int開始行 + 3 + p_dicメンバー.Count, 1 + l_intNissu * 2 + 2))
         .Borders(xlEdgeRight).Weight = xlMedium
         .Borders(xlEdgeLeft).Weight = xlMedium
         .Borders(xlEdgeTop).Weight = xlMedium
         .Borders(xlEdgeBottom).Weight = xlMedium
     End With
     '内訳
-    Range(Cells(p_int開始行 + 2, 1), Cells(p_int開始行 + 2, 1 + l_intWeeks * 2 + 2)).Borders(xlEdgeBottom).Weight = xlMedium
+    Range(Cells(p_int開始行 + 2, 1), Cells(p_int開始行 + 2, 1 + l_intNissu * 2 + 2)).Borders(xlEdgeBottom).Weight = xlMedium
     
-    For k = 0 To l_intWeeks * 2
+    For k = 0 To l_intNissu * 2
         If (k Mod 2) = 0 Then
             With Range(Cells(p_int開始行 + 1, 2 + k), Cells(p_int開始行 + 3 + p_dicメンバー.Count, 2 + k))
                 .Borders(xlEdgeLeft).Weight = xlMedium
@@ -1570,8 +1723,25 @@ Private Sub 予実管理明細表作成(p_int開始行 As Integer, p_dicメンバー As Object, 
 
     Rows(3).Columns.AutoFit                                         'セルの列幅自動設定
     
-    For n = 1 To l_intWeeks * 2 + 1
+    For n = 1 To l_intNissu * 2 + 1
         Cells(3, n).ColumnWidth = Cells(3, n).ColumnWidth * 1.2     'セルの列幅自動設定 ×１．２倍
     Next n
+
+    '列のグループ化
+    If p_int開始行 <> 2 Then    '精査の表を作る時のみ実施
+        For k = 0 To l_intNissu * 2
+            If (k Mod 14) = 0 And k <> 0 Then
+                With Range(Cells(p_int開始行 + 1, k - 13 + 1), Cells(p_int開始行 + 1, k - 1))
+                    .Columns.Group                                      '非表示状態にしたい個所をグループ化
+                    ActiveSheet.Outline.ShowLevels columnlevels:=1      '現時点でグループ化されている個所を非表示にする
+                End With
+            End If
+        Next k
+    End If
+    
+    
+    '19/03/26 Mod End
     
 End Sub
+
+
