@@ -219,6 +219,15 @@ Sub 日毎予実管理追加()
     '######################################################################
     Call 予実管理作成(l_intNissu)
     
+    '19/04/04 Add Start
+    '######################################################################
+    '######################################################################
+    '予実管理(機能単位)シートの作成
+    '######################################################################
+    '######################################################################
+    Call 予実管理作成_機能単位(l_intNissu)
+    '19/04/04 Add End
+    
     
     MsgBox "作成完了"
 
@@ -230,7 +239,7 @@ Sub 日毎予実管理追加()
     '例外処理
     '###########################
 ErrorHandler_WoekSheetBKUP:
-    MsgBox Err.Number & ":" & Err.Description & vbCrLf & "(bk_日次管理シートが残っている可能性があります。削除して下さい。)", vbCritical & vbOKOnly, "エラー"
+    MsgBox Err.Number & ":" & Err.Description & vbCrLf & "(又は、bk_日次管理シートが残っている可能性があります。削除して下さい。)", vbCritical & vbOKOnly, "エラー"
 
 End Sub
 
@@ -1006,6 +1015,9 @@ Private Sub フォーマット用背景色設定()
     '入力セルについて背景色を設定する
     Range(Cells(m_lngStartRow, 2), Cells(m_lngEndRow, 2)).Interior.ColorIndex = 36       'ID
     Range(Cells(m_lngStartRow, 3), Cells(m_lngEndRow, 3)).Interior.ColorIndex = 19      'シナリオ名
+    '19/04/04 Add Start
+    Range(Cells(m_lngStartRow, 4), Cells(m_lngEndRow, 3)).Interior.ColorIndex = 19      '機能名
+    '19/04/04 Add End
     Range(Cells(m_lngStartRow, 5), Cells(m_lngEndRow, 5)).Interior.ColorIndex = 19      'ケース数
     Range(Cells(m_lngStartRow, 6), Cells(m_lngEndRow, 6)).Interior.ColorIndex = 19      '実施者
     Range(Cells(m_lngStartRow, 7), Cells(m_lngEndRow, 7)).Interior.ColorIndex = 36       'テスト実施-着手-予定
@@ -1742,6 +1754,434 @@ Private Sub 予実管理明細表作成(p_int開始行 As Integer, p_dicメンバー As Object, 
     
     '19/03/26 Mod End
     
+    
 End Sub
+
+'19/04/04 Add Start
+'################################
+'予実管理(機能単位)シートを作成する
+'################################
+Private Sub 予実管理作成_機能単位(p_intNissu As Integer)
+
+    Worksheets("予実管理_機能単位").Activate
+
+    'シート初期化
+    Application.DisplayAlerts = False   '確認メッセージの非表示
+    Range("3:3").UnMerge                'セルの結合解除
+    Cells.ClearFormats                  '全セルの表示形式クリア
+    Cells.Clear                         '全セルのクリア
+    Cells.ColumnWidth = 5               '全セルの幅
+    Cells.RowHeight = 20                '全セルの高さ
+    ActiveSheet.Columns.ClearOutline    '列のグループ化を全て削除
+
+    '変数宣言
+    Dim Dic担当者 As Object
+    Dim Dic精査者 As Object
+    Dim Dic機能 As Object
+    Dim Dic対象機能 As Object
+    Dim l_intテスト実施start As Integer
+    Dim l_intテスト精査start As Integer
+    Dim l_int機能メンバー数 As Integer
+    Dim l_int機能_担当者数 As Integer
+    Dim l_int機能_精査者数 As Integer
+    Dim i As Integer
+    Dim j As Integer
+    Dim k As Integer
+    Dim Keys_機能() As Variant
+    Dim Keys_担当者() As Variant
+    Dim Keys_精査者() As Variant
+    Dim l_str機能 As String
+    
+    Set Dic対象機能 = CreateObject("Scripting.Dictionary")
+    
+    'タイトル
+    With Cells(1, 1)
+        .Value = "予実管理(機能単位)"
+        .Font.Bold = True
+    End With
+
+
+    '機能の取得
+    Set Dic機能 = 機能取得()
+    Keys_機能 = Dic機能.Keys                    '機能キーをセット
+    
+    'テスト実施者の取得
+    Set Dic担当者 = メンバー取得_機能単位("担当者")
+    Keys_担当者 = Dic担当者.Keys                '機能キーをセット
+    
+    'テスト精査者の取得
+    Set Dic精査者 = メンバー取得_機能単位("精査者")
+    Keys_精査者 = Dic精査者.Keys                '機能キーをセット
+
+    
+    '機能単位にテスト実施、テスト精査の予実管理表を作成する。
+    For j = 0 To Dic機能.Count - 1
+    
+        '機能名の取得
+        l_str機能 = Keys_機能(j)
+            
+        '最初の機能によるテスト実施の開始行の設定
+        If j = 0 Then
+            l_intテスト実施start = 2
+        End If
+                
+                
+        '################
+        '## テスト実施 ##
+        '################
+
+        '対象機能の担当者を抽出する。（次のテスト精査と、次機能のテスト実施の開始行の設定準備にもなる）
+        For k = 0 To Dic担当者.Count - 1
+            If l_str機能 = Dic担当者.Item(Keys_担当者(k))(1) Then
+                If Not Dic対象機能.exists(Dic担当者.Item(Keys_担当者(k))(0)) Then
+                    Dic対象機能.Add Dic担当者.Item(Keys_担当者(k))(0), Null
+                    l_int機能_担当者数 = l_int機能_担当者数 + 1
+                End If
+            End If
+        Next k
+        
+        'テスト実施者の予実管理表作成(機能単位)
+        Call 予実管理明細表作成_機能単位("テスト実施", l_intテスト実施start, Dic対象機能, l_str機能, p_intNissu)
+
+        Dic対象機能.RemoveAll
+        
+        '################
+        '## テスト精査 ##
+        '################
+        
+        'テスト精査の開始行の設定
+        '機能単位のテスト実施の開始行 + (日付,担当)(2行分) + 担当者数 + 合計行(1行分) + 空欄(2行分)
+        l_intテスト精査start = l_intテスト実施start + 2 + l_int機能_担当者数 + 1 + 2
+        
+        
+        '対象機能の精査者を抽出する。（次の機能に向けて、テスト精査の開始行の設定準備にもなる）
+        For k = 0 To Dic精査者.Count - 1
+            If l_str機能 = Dic精査者.Item(Keys_精査者(k))(1) Then
+                If Not Dic対象機能.exists(Dic精査者.Item(Keys_精査者(k))(0)) Then
+                    Dic対象機能.Add Dic精査者.Item(Keys_精査者(k))(0), Null
+                    l_int機能_精査者数 = l_int機能_精査者数 + 1
+                End If
+            End If
+        Next k
+        
+        'テスト精査者の予実管理表作成(機能単位)
+        Call 予実管理明細表作成_機能単位("テスト精査", l_intテスト精査start, Dic対象機能, l_str機能, p_intNissu)
+        
+        Dic対象機能.RemoveAll
+        
+        '次の機能単位のテスト実施の開始行の設定
+        '機能単位のテスト精査開始行 + (日付,担当)(2行分) + 精査者の人数 + 合計行(1行分) + 空白行(4行分)
+        l_intテスト実施start = l_intテスト精査start + 2 + l_int機能_精査者数 + 1 + 4
+        
+        l_int機能_担当者数 = 0
+        l_int機能_精査者数 = 0
+        l_str機能 = ""
+    Next j
+    
+    '列のグループ化
+    For k = 0 To p_intNissu * 2
+        If (k Mod 14) = 0 And k <> 0 Then
+            With Range(Cells(1, k - 13 + 1), Cells(1, k - 1))
+                .Columns.Group                                      '非表示状態にしたい個所をグループ化
+                ActiveSheet.Outline.ShowLevels columnlevels:=1      '現時点でグループ化されている個所を非表示にする
+            End With
+        End If
+    Next k
+
+
+    Cells.HorizontalAlignment = xlCenter
+    Columns("A").HorizontalAlignment = xlLeft
+    Cells.VerticalAlignment = xlCenter
+
+        
+    Application.DisplayAlerts = True    '確認メッセージの表示
+    
+    Worksheets("日次管理").Activate
+
+End Sub
+
+
+'###########################
+'予実管理明細表作成_機能単位
+'###########################
+Private Sub 予実管理明細表作成_機能単位(p_strテスト実施_精査 As String, p_int開始行 As Integer, p_dicメンバー As Object, p_str機能 As String, p_intNissu As Integer)
+    
+    
+    '変数宣言
+    Dim l_sht_日次管理 As Worksheet
+    Dim l_sht_Yojitsu As Worksheet
+    Dim Keys() As Variant
+    Dim l_intNissu As Integer
+    Dim l_wrkDate As Date
+    Dim l_intWeeks As Integer
+    Dim j As Integer
+    Dim k As Integer
+    Dim m As Integer
+    Dim n As Integer
+    Dim l_bolChgFrg As Boolean
+
+    '変数初期化
+    Set l_sht_日次管理 = Sheets("日次管理")
+    Set l_sht_Yojitsu = Sheets("予実管理_機能単位")
+    
+    If p_strテスト実施_精査 = "テスト実施" Then     'テスト実施
+        With Cells(p_int開始行, 1)
+            .Value = p_str機能
+            .Font.Bold = True
+        End With
+        With Cells(p_int開始行, 2)
+            .Value = "テスト実施"
+            .Font.Bold = True
+        End With
+    Else                                            'テスト精査
+        With Cells(p_int開始行, 1)
+            .Value = p_str機能
+            .Font.Bold = True
+        End With
+        With Cells(p_int開始行, 2)
+            .Value = "テスト精査"
+            .Font.Bold = True
+        End With
+    End If
+
+    '本日日付
+    With Cells(p_int開始行 + 1, 1)
+        .Value = "=TODAY()"
+        .Font.ColorIndex = 2
+        .Font.Bold = True
+    End With
+
+
+    '##############
+    'テスト実施者の取得
+    '##############
+    Cells(p_int開始行 + 2, 1).Value = "担当"
+    
+    '担当者/精査者をセット
+    Keys = p_dicメンバー.Keys
+   
+    For j = 0 To p_dicメンバー.Count - 1
+        Cells(p_int開始行 + 3 + j, 1).Value = Keys(j)
+    Next j
+    
+        
+    '合計
+    Cells(p_int開始行 + 3 + p_dicメンバー.Count, 1).Value = "合計"
+
+    '１日単位に「予定」「実績」列項目を用意する
+    l_intNissu = p_intNissu + 1
+    l_wrkDate = l_sht_日次管理.Cells(1, m_intStartColumn).Value
+    l_intWeeks = (m_intEndCoumn - m_intStartColumn) / 4 / 7
+
+    For k = 0 To l_intNissu - 1
+        For m = 0 To 1
+            Cells(p_int開始行 + 1, 2 + (2 * k) + m).Value = l_wrkDate   '基準日
+
+            If ((2 + m) Mod 2) = 0 Then     '予定
+                Cells(p_int開始行 + 2, 2 + (2 * k) + m).Value = "予定"
+                '担当者
+                If p_strテスト実施_精査 = "テスト実施" Then     'テスト実施
+                    For j = 0 To p_dicメンバー.Count - 1
+                        Cells(p_int開始行 + 3 + j, 2 + (2 * k) + m) = _
+                        "=SUMPRODUCT((日次管理!" + l_sht_日次管理.Cells(1, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(1, m_intEndCoumn).Address + "<=" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2 + (2 * k) + m).Address + ")*(日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, 6).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, 6).Address + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1).Address + ")*(日次管理!" + l_sht_日次管理.Cells(2, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(2, m_intEndCoumn).Address + "=" + """実施完了""" + ")*(日次管理!" + l_sht_日次管理.Cells(3, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(3, m_intEndCoumn).Address + "=" + """予定""" + ")*(日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, 4).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, 4).Address + "=" + l_sht_Yojitsu.Cells(p_int開始行, 1).Address + ")," _
+                        + "日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, m_intEndCoumn).Address + ")" '←関数が入る"
+                          
+                    Next j
+                Else                        'テスト精査
+                    For j = 0 To p_dicメンバー.Count - 1
+                        Cells(p_int開始行 + 3 + j, 2 + (2 * k) + m) = _
+                        "=SUMPRODUCT((日次管理!" + l_sht_日次管理.Cells(1, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(1, m_intEndCoumn).Address + "<=" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2 + (2 * k) + m).Address + ")*(日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, 11).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, 11).Address + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1).Address + ")*(日次管理!" + l_sht_日次管理.Cells(2, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(2, m_intEndCoumn).Address + "=" + """精査完了""" + ")*(日次管理!" + l_sht_日次管理.Cells(3, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(3, m_intEndCoumn).Address + "=" + """予定""" + ")*(日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, 4).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, 4).Address + "=" + l_sht_Yojitsu.Cells(p_int開始行, 1).Address + ")," _
+                        + "日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, m_intEndCoumn).Address + ")" '←関数が入る！"
+                    Next j
+
+                End If
+                '合計
+                Cells(p_int開始行 + 3 + p_dicメンバー.Count, 2 + (2 * k) + m) = _
+                "=SUM(" + l_sht_Yojitsu.Cells(p_int開始行 + 3, 2 + (2 * k) + m).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + p_dicメンバー.Count - 1, 2 + (2 * k) + m).Address + ")"
+                
+            ElseIf ((2 + m) Mod 2) = 1 Then  '実績
+                Cells(p_int開始行 + 2, 2 + (2 * k) + m).Value = "実績"
+                '担当者
+                If p_strテスト実施_精査 = "テスト実施" Then     'テスト実施
+                    For j = 0 To p_dicメンバー.Count - 1
+                        Cells(p_int開始行 + 3 + j, 2 + (2 * k) + m) = _
+                        "=SUMPRODUCT((日次管理!" + l_sht_日次管理.Cells(1, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(1, m_intEndCoumn).Address + "<=" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2 + (2 * k) + m).Address + ")*(日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, 6).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, 6).Address + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1).Address + ")*(日次管理!" + l_sht_日次管理.Cells(2, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(2, m_intEndCoumn).Address + "=" + """実施完了""" + ")*(日次管理!" + l_sht_日次管理.Cells(3, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(3, m_intEndCoumn).Address + "=" + """実績""" + ")*(日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, 4).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, 4).Address + "=" + l_sht_Yojitsu.Cells(p_int開始行, 1).Address + ")," _
+                        + "日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, m_intEndCoumn).Address + ")" '←関数が入る！"
+                    Next j
+                Else                        'テスト精査
+                    For j = 0 To p_dicメンバー.Count - 1
+                        Cells(p_int開始行 + 3 + j, 2 + (2 * k) + m) = _
+                        "=SUMPRODUCT((日次管理!" + l_sht_日次管理.Cells(1, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(1, m_intEndCoumn).Address + "<=" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2 + (2 * k) + m).Address + ")*(日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, 11).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, 11).Address + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1).Address + ")*(日次管理!" + l_sht_日次管理.Cells(2, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(2, m_intEndCoumn).Address + "=" + """精査完了""" + ")*(日次管理!" + l_sht_日次管理.Cells(3, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(3, m_intEndCoumn).Address + "=" + """実績""" + ")*(日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, 4).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, 4).Address + "=" + l_sht_Yojitsu.Cells(p_int開始行, 1).Address + ")," _
+                        + "日次管理!" + l_sht_日次管理.Cells(m_lngStartRow, m_intStartColumn).Address + ":" + l_sht_日次管理.Cells(m_lngEndRow, m_intEndCoumn).Address + ")" '←関数が入る！"
+                    Next j
+                End If
+                '合計
+                Cells(p_int開始行 + 3 + p_dicメンバー.Count, 2 + (2 * k) + m) = _
+                "=SUM(" + l_sht_Yojitsu.Cells(p_int開始行 + 3, 2 + (2 * k) + m).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + p_dicメンバー.Count - 1, 2 + (2 * k) + m).Address + ")"
+            End If
+        Next m
+        l_wrkDate = l_wrkDate + 1
+    Next k
+
+    '「実績日による管理」列項目を用意する
+    With Range(Cells(p_int開始行 + 1, 1 + l_intNissu * 2 + 1), Cells(p_int開始行 + 1, 1 + l_intNissu * 2 + 2))
+        .Merge
+        .Value = "実績日による管理" + vbCrLf + "(指摘有無に関わらず" + vbCrLf + "初回の実績入力日で管理)"
+        .WrapText = True
+        .ColumnWidth = 15
+        .RowHeight = 40
+    End With
+    
+    Cells(p_int開始行 + 2, 1 + l_intNissu * 2 + 1) = "進捗率"
+    '担当者 + 合計
+    For j = 0 To p_dicメンバー.Count
+        With Cells(p_int開始行 + 3 + j, 1 + l_intNissu * 2 + 1)
+            .Value = "=SUMPRODUCT((" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + "- WEEKDAY(" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + ") + 6 =" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1 + l_intNissu * 2).Address + ")*(" + """実績""" + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 1 + l_intNissu * 2).Address + ")," + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intNissu * 2).Address + ")" + _
+            "/SUMPRODUCT((" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + "- WEEKDAY(" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1).Address + ") + 6 =" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 1, 1 + l_intNissu * 2).Address + ")*(" + """予定""" + "=" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 2, 1 + l_intNissu * 2).Address + ")," + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 2).Address + ":" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intNissu * 2).Address + ")"
+            .NumberFormatLocal = "0%"
+        End With
+    Next j
+
+    Cells(p_int開始行 + 2, 1 + l_intNissu * 2 + 2) = "完了率"
+    '担当者 + 合計
+    For j = 0 To p_dicメンバー.Count
+        With Cells(p_int開始行 + 3 + j, 1 + l_intNissu * 2 + 2)
+            .Value = "=" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intNissu * 2).Address + "/" + l_sht_Yojitsu.Cells(p_int開始行 + 3 + j, 1 + l_intNissu * 2 - 1).Address
+            .NumberFormatLocal = "0%"
+        End With
+    Next j
+    
+    '背景色
+    'Range(Cells(p_int開始行 + 1, 1), Cells(p_int開始行 + 2, 1 + l_intNissu * 2 + 2)).Interior.ColorIndex = 40
+    'Range(Cells(p_int開始行 + 2, 1), Cells(p_int開始行 + 2, 1 + l_intNissu * 2 + 2)).Interior.ColorIndex = 38
+    
+    For k = 1 To l_intNissu * 2 + 1 Step 2
+        With Range(Cells(p_int開始行 + 1, 1 + k), Cells(p_int開始行 + 2, 2 + k))
+        
+        If l_bolChgFrg Then
+            .Interior.ColorIndex = 35
+            l_bolChgFrg = False
+        Else
+            .Interior.ColorIndex = 40
+            l_bolChgFrg = True
+        End If
+        
+        End With
+    Next k
+    
+    Range(Cells(p_int開始行 + 1, 1), Cells(p_int開始行 + 2, 1)).Interior.ColorIndex = 38
+    
+        
+    '担当者 + 合計
+    For j = 0 To p_dicメンバー.Count
+        If (j Mod 2) = 1 Then
+            Range(Cells(p_int開始行 + 3 + j, 1), Cells(p_int開始行 + 3 + j, 1 + l_intNissu * 2 + 2)).Interior.ColorIndex = 24
+        End If
+    Next j
+
+    '罫線描写
+    Range(Cells(p_int開始行 + 1, 1), Cells(p_int開始行 + 3 + p_dicメンバー.Count, 1 + l_intNissu * 2 + 2)).Borders.LineStyle = xlContinuous
+    
+    '太線描写
+    '外枠
+    With Range(Cells(p_int開始行 + 1, 1), Cells(p_int開始行 + 3 + p_dicメンバー.Count, 1 + l_intNissu * 2 + 2))
+        .Borders(xlEdgeRight).Weight = xlMedium
+        .Borders(xlEdgeLeft).Weight = xlMedium
+        .Borders(xlEdgeTop).Weight = xlMedium
+        .Borders(xlEdgeBottom).Weight = xlMedium
+    End With
+    '内訳
+    Range(Cells(p_int開始行 + 2, 1), Cells(p_int開始行 + 2, 1 + l_intNissu * 2 + 2)).Borders(xlEdgeBottom).Weight = xlMedium
+    
+    For k = 0 To l_intNissu * 2
+        If (k Mod 2) = 0 Then
+            With Range(Cells(p_int開始行 + 1, 2 + k), Cells(p_int開始行 + 3 + p_dicメンバー.Count, 2 + k))
+                .Borders(xlEdgeLeft).Weight = xlMedium
+            End With
+        End If
+    Next k
+
+
+    Rows(3).Columns.AutoFit                                         'セルの列幅自動設定
+    
+    For n = 1 To l_intNissu * 2 + 1
+        Cells(3, n).ColumnWidth = Cells(3, n).ColumnWidth * 1.2     'セルの列幅自動設定 ×１．２倍
+    Next n
+    
+    '19/03/26 Mod End
+
+End Sub
+
+Private Function 機能取得() As Object
+
+    Dim l_DicKinou As Object
+    Dim i As Integer
+    Dim l_strKinou As String
+    Set l_DicKinou = CreateObject("Scripting.Dictionary")
+    
+    Worksheets("日次管理").Activate
+    
+    For i = m_lngStartRow To m_lngEndRow
+        '機能を取得
+        l_strKinou = Cells(i, 4).Value
+        
+        If Not l_DicKinou.exists(l_strKinou) Then
+            l_DicKinou.Add l_strKinou, Null
+        End If
+        l_strKinou = ""
+    Next i
+
+    Set 機能取得 = l_DicKinou
+    
+    Worksheets("予実管理_機能単位").Activate
+    
+End Function
+
+Private Function メンバー取得_機能単位(p_strRoll As String) As Object
+
+    Dim l_Dic As Object
+    Dim i As Integer
+    Dim j As Integer
+    Dim l_strName As String
+    Dim l_strKinou As String
+    Dim Info(1) As String
+    Set l_Dic = CreateObject("Scripting.Dictionary")
+    Dim Keys() As Variant
+    'l_Dic.RemoveAll
+    
+    Worksheets("日次管理").Activate
+    
+    j = 0
+    
+    For i = m_lngStartRow To m_lngEndRow
+        If p_strRoll = "担当者" Then
+            '担当者を取得
+            l_strName = Cells(i, 6).Value
+            l_strKinou = Cells(i, 4).Value
+        Else
+            '精査者を取得
+            l_strName = Cells(i, 11).Value
+            l_strKinou = Cells(i, 4).Value
+        End If
+        If Not l_strName = "" Then
+            Info(0) = l_strName
+            Info(1) = l_strKinou
+            
+            l_Dic.Add j, Info
+
+            j = j + 1
+        End If
+        l_strName = ""
+        l_strKinou = ""
+        Erase Info
+    Next i
+
+    Set メンバー取得_機能単位 = l_Dic
+
+    
+    Worksheets("予実管理_機能単位").Activate
+    
+End Function
+'19/04/04 Add End
 
 
