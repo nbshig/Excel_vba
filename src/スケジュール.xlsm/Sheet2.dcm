@@ -1,0 +1,81 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "Sheet2"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+Option Explicit
+
+Private Sub Worksheet_Change(ByVal Target As Range)
+
+    Dim l_lngLastRow As Long
+    Dim l_intReturnCode As Integer
+    Dim l_strValue As String
+    Dim l_lngLastRowB As Long
+    
+    
+    ' A列に文字入力されたとき
+    If (Target.Column = 1) Then
+
+        'イベント抑制する
+        Application.EnableEvents = False
+                    
+        'A列最終行を取得
+        l_lngLastRow = Cells(Rows.Count, 1).End(xlUp).Row
+        
+        '文字入力したA列セルが最終行のとき
+        If Target.Row = l_lngLastRow Then
+        
+            'B列の最終行を取得
+            l_lngLastRowB = Cells(Rows.Count, 2).End(xlUp).Row
+            
+            'A列ターゲット行の方がB列最終行より下の行のとき
+            If Target.Row > l_lngLastRowB Then
+            
+                l_intReturnCode = MsgBox("前週のタスクをコピーしますか？", vbOKCancel)
+                
+                If l_intReturnCode = 1 Then
+
+                    'シートの保護を解除
+                    ActiveSheet.Unprotect
+    
+                    'A列ターゲット行の値を取得
+                    l_strValue = CStr(Target.Value)
+                    
+                    '前週タスクをコピー
+                    Call Copy_Task(l_lngLastRow, l_strValue)
+    
+                    'コピー後のB列最終行を取得
+                    l_lngLastRowB = 0
+                    l_lngLastRowB = Cells(Rows.Count, 2).End(xlUp).Row
+                    
+                    '条件付き書式を設定
+                    Call Set_FormatConditions(l_lngLastRowB)
+                
+                    'シートを保護
+                    ActiveSheet.Protect
+                Else
+                    '入力をクリア
+                    Target.Value = ""
+                End If
+            Else
+                '入力をクリア
+                Target.Value = ""
+            End If
+        Else
+            '入力をクリア
+            Target.Value = ""
+        End If
+    
+    'イベントの発生を再開する
+    Application.EnableEvents = True
+    End If
+End Sub
+
+Sub a()
+    Application.EnableEvents = True
+End Sub
+
