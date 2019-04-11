@@ -1879,7 +1879,7 @@ Private Sub 予実管理作成_機能単位(p_intNissu As Integer)
     Next j
     
     '列のグループ化
-    For k = 0 To p_intNissu * 2
+    For k = 0 To (p_intNissu + 1) * 2
         If (k Mod 14) = 0 And k <> 0 Then
             With Range(Cells(1, k - 13 + 1), Cells(1, k - 1))
                 .Columns.Group                                      '非表示状態にしたい個所をグループ化
