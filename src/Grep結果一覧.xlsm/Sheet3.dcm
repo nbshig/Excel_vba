@@ -1,0 +1,211 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "Sheet3"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+Private Sub Grep内容クリア_Click()
+
+    Dim objWBK As Workbook
+    Dim objWSH_貼り付け As Worksheet
+
+    Application.ScreenUpdating = False  '画面更新の非表示
+    
+    Set objWBK = ThisWorkbook
+    Set objWSH_貼り付け = objWBK.ActiveSheet  '複数のフォーマットシートを作成する事を考慮。
+    
+    '内容削除
+    With objWSH_貼り付け
+        .Range("A4:A65000").ClearContents
+        .Range("B4:B65000").ClearContents
+        .Range("C4:C65000").ClearContents
+        .Range("D4:D65000").ClearContents
+        .Range("E4:E65000").ClearContents
+        .Range("G4:G65000").ClearContents
+    End With
+
+    Application.ScreenUpdating = True  '画面更新の表示
+    
+End Sub
+
+Private Sub 全てクリア_Click()
+
+    Dim objWBK As Workbook
+    Dim objWSH_貼り付け As Worksheet
+
+    Application.ScreenUpdating = False  '画面更新の非表示
+    
+    Set objWBK = ThisWorkbook
+    Set objWSH_貼り付け = objWBK.ActiveSheet  '複数のフォーマットシートを作成する事を考慮。
+    
+    '内容削除
+    objWSH_貼り付け.Cells.Clear
+    
+    'テンプレート再構築
+    '文言設定
+    With objWSH_貼り付け
+        .Range("A3").Offset(0, 0).Value = "No"
+        .Range("A3").Offset(0, 1).Value = "検索文字列"
+        .Range("A3").Offset(0, 2).Value = "フルパス"
+        .Range("A3").Offset(0, 3).Value = "ファイル名"
+        .Range("A3").Offset(0, 4).Value = "行数"
+        .Range("A3").Offset(0, 5).Value = ""
+        .Range("A3").Offset(0, 6).Value = "該当箇所"
+        .Range("A3").Offset(0, 7).Value = "修正" & vbNewLine & "要否"
+        .Range("A3").Offset(0, 8).Value = "リンク先" & vbNewLine & "（より詳細に内容を示したい場合、下記にリンク先名を用意する）"
+        .Range("A3").Offset(0, 9).Value = "備考" & vbNewLine & "（修正対象外とする場合、その理由を具体的に記載する。）" & vbNewLine & "×：「スコープ外の為、修正対象外」" & vbNewLine & "○：「スコープ外の為、修正対象外" & vbNewLine & "     (要件定義-前提○○参照）」"
+    End With
+    
+    '書式設定
+    With objWSH_貼り付け.Range("A3:J3")
+        '折り返して全体を表示する
+        .WrapText = True
+
+        '罫線を表示する
+        With .Borders(xlEdgeLeft)
+            .LineStyle = xlContinuous
+            .Weight = xlThin
+            .ColorIndex = xlAutomatic
+        End With
+        With .Borders(xlEdgeTop)
+            .LineStyle = xlContinuous
+            .Weight = xlThin
+            .ColorIndex = xlAutomatic
+        End With
+        With .Borders(xlEdgeBottom)
+            .LineStyle = xlContinuous
+            .Weight = xlThin
+            .ColorIndex = xlAutomatic
+        End With
+        With .Borders(xlEdgeRight)
+            .LineStyle = xlContinuous
+            .Weight = xlThin
+            .ColorIndex = xlAutomatic
+        End With
+        With .Borders(xlInsideVertical)
+            .LineStyle = xlContinuous
+            .Weight = xlThin
+            .ColorIndex = xlAutomatic
+        End With
+    
+        '背景色
+        With .Interior
+            .ColorIndex = 37
+            .Pattern = xlSolid
+            .PatternColorIndex = xlAutomatic
+        End With
+
+
+
+    End With
+    
+    '下記の手入力するセルは別の背景色にする
+    With objWSH_貼り付け
+        With .Range("H3:J3").Interior
+            .ColorIndex = 35
+            .Pattern = xlSolid
+            .PatternColorIndex = xlAutomatic
+        End With
+    End With
+    
+    '担当者、精査者の枠を作成する
+    Range("G1:I2").Select
+    Selection.Borders(xlDiagonalDown).LineStyle = xlNone
+    Selection.Borders(xlDiagonalUp).LineStyle = xlNone
+    With Selection.Borders(xlEdgeLeft)
+        .LineStyle = xlContinuous
+        .Weight = xlThin
+        .ColorIndex = xlAutomatic
+    End With
+    With Selection.Borders(xlEdgeTop)
+        .LineStyle = xlContinuous
+        .Weight = xlThin
+        .ColorIndex = xlAutomatic
+    End With
+    With Selection.Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous
+        .Weight = xlThin
+        .ColorIndex = xlAutomatic
+    End With
+    With Selection.Borders(xlEdgeRight)
+        .LineStyle = xlContinuous
+        .Weight = xlThin
+        .ColorIndex = xlAutomatic
+    End With
+    With Selection.Borders(xlInsideVertical)
+        .LineStyle = xlContinuous
+        .Weight = xlThin
+        .ColorIndex = xlAutomatic
+    End With
+    With Selection.Borders(xlInsideHorizontal)
+        .LineStyle = xlContinuous
+        .Weight = xlThin
+        .ColorIndex = xlAutomatic
+    End With
+    Range("G1").Select
+    ActiveCell.FormulaR1C1 = "担当者"
+    Range("H1:I1").Select
+    With Selection
+        .HorizontalAlignment = xlGeneral
+        .VerticalAlignment = xlCenter
+        .WrapText = False
+        .Orientation = 0
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+        .MergeCells = True
+    End With
+    Range("H2:I2").Select
+    With Selection
+        .HorizontalAlignment = xlGeneral
+        .VerticalAlignment = xlCenter
+        .WrapText = False
+        .Orientation = 0
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+        .MergeCells = True
+    End With
+    Range("H1:I1").Select
+    ActiveCell.FormulaR1C1 = "精査者"
+    
+    Range("G1:I1").Select
+    With Selection
+        .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlCenter
+        .WrapText = False
+        .Orientation = 0
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+    End With
+
+    'フォントサイズ
+    Range("A1:J3").Font.Size = 10
+        
+    Application.ScreenUpdating = True  '画面更新の表示
+End Sub
+
+Private Sub 読み込み_Click()
+
+    Application.ScreenUpdating = False  '画面更新の非表示
+    
+    Dim obj処理メイン As 処理メイン
+    Set obj処理メイン = New 処理メイン
+    
+    obj処理メイン.make
+    
+    'フォントサイズ
+    Range("A:J").Font.Size = 10
+    
+    Application.ScreenUpdating = True  '画面更新の表示
+End Sub
+
+    
+

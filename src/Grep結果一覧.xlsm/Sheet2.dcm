@@ -1,0 +1,23 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+END
+Attribute VB_Name = "Sheet2"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+Private Sub 貼り付けクリア_Click()
+
+    Dim objWBK As Workbook
+    Dim objWSH_貼り付け As Worksheet
+
+    Application.ScreenUpdating = False  '画面更新の非表示
+    
+    Set objWBK = ThisWorkbook
+    Set objWSH_貼り付け = objWBK.Worksheets("【Grep結果貼り付け】")
+    objWSH_貼り付け.Cells.ClearContents
+    
+    Application.ScreenUpdating = True  '画面更新の表示
+End Sub
+
